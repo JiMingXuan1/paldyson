@@ -1,0 +1,22 @@
+{
+  "name": "paldyson",
+  "private": true,
+  "version": "0.1.0",
+  "description": "幻兽戴森 (PalDyson) — a 2D top-down base-building game blending Palworld-style pals with Dyson Sphere Program-style factory automation.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.3.5"
+  }
+}
