@@ -175,6 +175,7 @@ export class UI {
     this.locked = locked;
     this.renderHotbar();
     this.renderBuildMenu();
+    this.applySelection(this.selectedBuild);
   }
 
   locked = new Set<string>();

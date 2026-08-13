@@ -62,8 +62,11 @@ export class TechSystem {
     }
     const rate = 1 / 2.5; // bottles per second
     r.redAcc = (r.redAcc ?? 0) + dt * rate;
-    while (r.redAcc >= 1) {
+    // Epsilon guards against float accumulation like 10 * 0.1 = 0.9999... < 1.
+    const EPS = 1e-9;
+    while (r.redAcc >= 1 - EPS) {
       r.redAcc -= 1;
+      if (r.redAcc < 0) r.redAcc = 0;
       const labs = this.world.buildings.filter((b) => b.id === "research_lab");
       let consumed = false;
       for (const lab of labs) {

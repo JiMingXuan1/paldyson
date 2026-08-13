@@ -149,8 +149,7 @@ export class BeltSystem {
       const bx = b.x - d.x;
       const by = b.y - d.y;
       const source = this.world.buildingAt(bx, by);
-      if (!source) continue;
-      if (source.id !== "chest" && source.outB.length === 0) continue;
+      if (!source || source.outB.length === 0) continue;
       // Output side must face this belt (chest is omni).
       const isChest = source.id === "chest";
       const facing = isChest || this.outputPos(source).x === b.x && this.outputPos(source).y === b.y;
