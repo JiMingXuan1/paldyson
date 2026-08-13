@@ -257,9 +257,8 @@ export class BuildingSystem {
         const r = RECIPES[recipeId];
         const hasInputs = Object.entries(r.inputs).every(([id, n]) => this.world.bCount(b, "inB", id) >= n);
         const outRoom = Object.entries(r.outputs).every(([_id, n]) => {
-          const cap = this.world.bufferCap(b);
           const cur = b.outB.reduce((a, s) => a + s.n, 0);
-          return cur + n <= cap;
+          return cur + n <= 12;
         });
         if (hasInputs && outRoom && pf > 0) {
           b.progress += (dt / r.time) * boost * pf;

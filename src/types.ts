@@ -61,6 +61,7 @@ export interface ResearchState {
   researched: string[];
   current: string | null;
   progress: number; // 0..1
+  redAcc: number; // fractional bottle accumulator for research rate
 }
 
 export interface WorldState {

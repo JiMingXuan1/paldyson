@@ -92,7 +92,7 @@ export class BeltSystem {
 
   tick(dt: number): void {
     this.acc += dt;
-    if (this.acc < BELT_TICK_MS) return;
+    if (this.acc < BELT_TICK_MS / 1000) return;
     this.acc = 0;
     const speed = BELT_ITEM_SPEED;
 

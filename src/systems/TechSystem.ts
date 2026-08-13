@@ -48,7 +48,8 @@ export class TechSystem {
     return true;
   }
 
-  /** Advance current research; consumes red science from any lab output buffer. */
+  /** Advance current research; consumes red science from any lab output buffer
+   *  at a rate of 1 bottle per 2.5s (total cost = tech.cost bottles). */
   tick(dt: number): void {
     const r = this.world.research;
     if (!r.current) return;
@@ -57,22 +58,29 @@ export class TechSystem {
       r.current = null;
       return;
     }
-    const labs = this.world.buildings.filter((b) => b.id === "research_lab");
-    // Consume 1 red science per 2.5s of research.
-    const rate = 1 / 2.5;
-    for (const lab of labs) {
-      if (r.progress >= tech.cost) break;
-      const red = lab.outB.find((s) => s.id === "red_science");
-      if (red && red.n > 0) {
-        red.n -= 1;
-        if (red.n <= 0) lab.outB.splice(lab.outB.indexOf(red), 1);
-        r.progress += dt * rate;
+    const rate = 1 / 2.5; // bottles per second
+    r.redAcc = (r.redAcc ?? 0) + dt * rate;
+    while (r.redAcc >= 1) {
+      r.redAcc -= 1;
+      const labs = this.world.buildings.filter((b) => b.id === "research_lab");
+      let consumed = false;
+      for (const lab of labs) {
+        const red = lab.outB.find((s) => s.id === "red_science");
+        if (red && red.n > 0) {
+          red.n -= 1;
+          if (red.n <= 0) lab.outB.splice(lab.outB.indexOf(red), 1);
+          consumed = true;
+          break;
+        }
       }
+      if (!consumed) break; // no bottles anywhere: stall
+      r.progress += 1 / tech.cost;
     }
-    if (r.progress >= tech.cost) {
+    if (r.progress >= 1) {
       r.researched.push(r.current);
       r.current = null;
       r.progress = 0;
+      r.redAcc = 0;
       Sfx.research();
       this.scene.events.emit("tech-complete", tech);
     }

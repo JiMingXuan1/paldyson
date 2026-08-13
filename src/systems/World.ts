@@ -73,7 +73,7 @@ export class World {
       buildings: [],
       belts: [],
       pals: [],
-      research: { researched: [], current: null, progress: 0 },
+      research: { researched: [], current: null, progress: 0, redAcc: 0 },
       nextUid: 1,
       stats: { captures: 0, built: 0, itemsProduced: 0, dysonFed: 0 },
     };
@@ -239,12 +239,29 @@ export class World {
   }
 
   bAdd(b: BuildingInst, which: "inB" | "outB", id: string, n: number): number {
-    const cap = this.bufferCap(b);
     const stacks = b[which];
+    if (b.id === "chest") {
+      // Chest: shared total capacity (storage semantics).
+      const total = stacks.reduce((a, s) => a + s.n, 0);
+      const added = Math.min(n, Math.max(0, 80 - total));
+      if (added <= 0) return 0;
+      const found = stacks.find((s) => s.id === id);
+      if (found) found.n += added;
+      else stacks.push({ id, n: added });
+      return added;
+    }
+    // Producers: per-item capacity so one material can never block another
+    // (avoids recipe deadlocks like a full stack of ore blocking coal).
+    const PER_ITEM = 12;
+    const MAX_TYPES = 6;
     const found = stacks.find((s) => s.id === id);
-    const total = stacks.reduce((a, s) => a + s.n, 0);
-    const space = Math.max(0, cap - total);
-    const added = Math.min(n, space);
+    let added: number;
+    if (found) {
+      added = Math.min(n, PER_ITEM - found.n);
+    } else {
+      if (stacks.length >= MAX_TYPES) return 0;
+      added = Math.min(n, PER_ITEM);
+    }
     if (added <= 0) return 0;
     if (found) found.n += added;
     else stacks.push({ id, n: added });
