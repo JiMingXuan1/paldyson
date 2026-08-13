@@ -1,0 +1,45 @@
+// Hero screenshots for the README: a small factory around the player at zoom 1.
+import { chromium } from "playwright";
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+page.on("pageerror", (e) => console.log("PAGEERR:", e.message));
+await page.goto("http://localhost:5173/", { waitUntil: "networkidle" });
+await page.click("#s-new");
+await page.waitForFunction(() => (window).__paldyson?.world, null, { timeout: 15000 });
+await page.waitForTimeout(500);
+await page.evaluate(() => {
+  const s = (window).__paldyson;
+  const w = s.world;
+  const ox = Math.round(w.state.player.x / 48) - 10, oy = Math.round(w.state.player.y / 48) - 10;
+  s.buildSys.deductCost = () => undefined;
+  const place = (id, dx, dy, dir = 1) => s.buildSys.place(id, ox + dx, oy + dy, dir);
+  place("wind_turbine", 1, 1, 0);
+  place("wind_turbine", 2, 1, 0);
+  place("mining_drill", 4, 4, 1);
+  place("furnace", 6, 4, 3);
+  s.beltSys.place(ox + 5, oy + 4, 1);
+  place("research_lab", 7, 4, 3);
+  place("assembler", 9, 4, 3);
+  s.beltSys.place(ox + 8, oy + 4, 1);
+  place("chest", 4, 6, 1);
+  place("pal_terminal", 6, 6, 1);
+  place("dyson_core", 9, 6, 1);
+  w.invAdd("iron_ore", 10); w.invAdd("coal", 10); w.invAdd("pal_sprout", 1);
+  s.palSys.releaseFromInventory("sprout");
+  const sprout = w.state.pals.find((p) => p.type === "sprout");
+  if (sprout) s.palSys.assignJob(sprout.uid, { kind: "follow" });
+  // Walk the player toward the factory so it fills the view.
+  w.state.player.x = (ox + 6.5) * 48;
+  w.state.player.y = (oy + 5.5) * 48;
+  s.scene.player.sprite.setPosition(w.state.player.x, w.state.player.y);
+  const belt1 = w.state.belts[0];
+  belt1.items.push({ id: "iron_ingot", pos: 0.4 });
+  belt1.items.push({ id: "gear", pos: 0.8 });
+  s.beltSys.rebuildItemSprites(belt1);
+});
+await page.waitForTimeout(2000);
+await page.screenshot({ path: "shots/hero-factory.png" });
+await page.keyboard.press("b");
+await page.waitForTimeout(400);
+await page.screenshot({ path: "shots/hero-buildmenu.png" });
+await browser.close();

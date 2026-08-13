@@ -7,7 +7,6 @@ import type { World } from "./World";
 import type { BeltInst, BuildingInst, ItemStack } from "../types";
 import { BUILDINGS } from "../data/buildings";
 import { DIRS, TILE, BELT_TICK_MS, BELT_ITEM_SPEED } from "../config";
-import { countStack } from "../utils/inv";
 
 export class BeltSystem {
   sprites = new Map<number, Phaser.GameObjects.Image>();
@@ -118,10 +117,9 @@ export class BeltSystem {
           }
           // Receiver building directly ahead?
           const receiver = this.world.buildingAt(nx, ny);
-          if (receiver) {
-            const cap = this.world.bufferCap(receiver);
-            if (this.accepts(receiver, it.id) && countStack(receiver.inB, it.id) < cap) {
-              this.world.bAdd(receiver, "inB", it.id, 1);
+          if (receiver && this.accepts(receiver, it.id)) {
+            const added = this.world.bAdd(receiver, "inB", it.id, 1);
+            if (added > 0) {
               removed.push(i);
               continue;
             }
