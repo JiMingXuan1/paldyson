@@ -33,10 +33,10 @@
 |---|---|---|---|
 | 21 | `tsc --noEmit` 严格模式零错误 | ✅ | |
 | 22 | `vite build` 生产构建通过 | ✅ | |
-| 23 | 无头浏览器启动 + 截图回归 | 🔄 | 见 docs/REVIEW.md |
-| 24 | 玩法闭环冒烟测试（采集→风电→采矿机→熔炉→红瓶→科技） | 🔄 | 无头浏览器自动化 |
-| 25 | 代码审查（独立子代理审阅 + 修复清单） | ⬜ | 见 docs/REVIEW.md |
-| 26 | GitHub 仓库备份与推送 | ⬜ | gh CLI 已认证 |
+| 23 | 无头浏览器启动 + 截图回归 | ✅ | 全屏像素扫描 + 逐建筑裁剪验证，见 docs/REVIEW.md |
+| 24 | 玩法闭环冒烟测试（采集→风电→采矿机→熔炉→红瓶→科技） | ✅ | scripts/smoke.mjs 24 项断言全过 |
+| 25 | 代码审查（独立子代理审阅 + 修复清单） | 🔄 | 见 docs/REVIEW.md |
+| 26 | GitHub 仓库备份与推送 | ✅ | https://github.com/JiMingXuan1/paldyson |
 
 ## 文档
 
@@ -45,5 +45,5 @@
 | 27 | README.md（玩法/操作/技术栈/结构/许可） | ✅ |
 | 28 | docs/PLAN.md（调研与设计） | ✅ |
 | 29 | docs/TASKS.md（本清单） | ✅ |
-| 30 | docs/CHANGELOG.md | 🔄 |
+| 30 | docs/CHANGELOG.md | ✅ | |
 | 31 | docs/REVIEW.md（代码审查记录） | ⬜ |
