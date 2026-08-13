@@ -33,12 +33,20 @@
 
 ## 🚀 运行
 
+**在线试玩（GitHub Pages）：https://jimingxuan1.github.io/paldyson/**
+
+本地开发：
+
 ```bash
 npm install
 npm run dev        # 开发：http://localhost:5173
 npm run build      # 类型检查 + 生产构建
 npm run preview    # 预览生产构建
 ```
+
+> 💡 若本地 `localhost:5173` 打开是空白页，多半是系统代理（如 Clash）劫持了
+> localhost 返回空 502——换 `http://127.0.0.1:5173` 或在代理设置里把
+> `localhost` 加入直连名单即可。
 
 ## 🛠 技术栈（调研结论）
 
