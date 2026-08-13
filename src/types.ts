@@ -16,6 +16,7 @@ export interface ItemStack {
 }
 
 export interface BeltItem {
+  uid: number; // stable instance id (sprite keying)
   id: string;
   pos: number; // 0..1 along the belt
 }

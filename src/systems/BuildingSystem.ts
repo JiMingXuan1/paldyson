@@ -7,7 +7,7 @@ import { BUILDINGS, RECIPES } from "../data/buildings";
 import { PALS } from "../data/pals";
 import { TechSystem } from "./TechSystem";
 import { Sfx } from "../utils/sound";
-import { DIRS, TILE, DYSON_NEEDED, PAL_BOOST_MATCH, PAL_BOOST_OTHER } from "../config";
+import { DIRS, TILE, MAP_W, MAP_H, DYSON_NEEDED, PAL_BOOST_MATCH, PAL_BOOST_OTHER, WIND_MIN, WIND_MAX } from "../config";
 
 export interface PowerReport {
   gen: number;
@@ -77,9 +77,14 @@ export class BuildingSystem {
   // ---- Placement ----
 
   canPlaceAt(id: string, x: number, y: number): { ok: boolean; reason?: string } {
-    if (x < 1 || y < 1 || x >= 95 || y >= 95) return { ok: false, reason: "地图边界" };
+    if (x < 1 || y < 1 || x >= MAP_W - 1 || y >= MAP_H - 1) return { ok: false, reason: "地图边界" };
     if (!this.world.isWalkable(x, y)) return { ok: false, reason: "水面无法建造" };
     if (this.world.buildingAt(x, y) || this.world.beltAt(x, y)) return { ok: false, reason: "位置已被占用" };
+    // Can't build on the tile the player is standing on.
+    const p = this.world.state.player;
+    if (Math.floor(p.x / TILE) === x && Math.floor(p.y / TILE) === y) {
+      return { ok: false, reason: "脚下无法建造" };
+    }
     const def = BUILDINGS[id];
     if (!def) return { ok: false, reason: "未知建筑" };
     if (def.requiresNode) {
@@ -155,7 +160,8 @@ export class BuildingSystem {
 
   private windFactor(): number {
     const t = this.world.state.time;
-    return 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(t / 11));
+    const phase = 0.5 + 0.5 * Math.sin(t / 11);
+    return WIND_MIN + (WIND_MAX - WIND_MIN) * phase;
   }
 
   recomputePower(): void {
@@ -219,11 +225,12 @@ export class BuildingSystem {
       if (!def) continue;
       const boost = this.palBoost(b);
 
-      // Fuel burn.
+      // Fuel burn (only when there is actual power demand).
       if (def.fuel) {
+        const demand = this.power.use > 0;
         if (b.fuel > 0) {
-          b.fuel -= dt;
-        } else if (this.world.bRemove(b, "inB", def.fuel.item, 1) === 1) {
+          if (demand) b.fuel -= dt;
+        } else if (demand && this.world.bRemove(b, "inB", def.fuel.item, 1) === 1) {
           b.fuel = def.fuel.burnS;
         }
         continue;
@@ -236,9 +243,10 @@ export class BuildingSystem {
           b.progress += (dt / 3) * boost * pf;
           if (b.progress >= 1) {
             b.progress = 0;
-            node.remaining--;
             const item = node.kind === "iron" ? "iron_ore" : node.kind === "coal" ? "coal" : "";
+            // Only consume node charges when the ore is actually stored.
             if (item && this.world.bAdd(b, "outB", item, 1) > 0) {
+              node.remaining--;
               b.prodCount++;
               this.world.state.stats.itemsProduced++;
             }
@@ -300,7 +308,7 @@ export class BuildingSystem {
       recipes: recipeIds.map((rid) => ({
         id: rid,
         name: RECIPES[rid]?.name ?? rid,
-        unlocked: RECIPES[rid]?.tech ? TechSystem.unlocked(this.world.state, RECIPES[rid].tech!) : true,
+        unlocked: RECIPES[rid]?.tech ? TechSystem.unlockedTech(this.world.state, RECIPES[rid].tech) : true,
       })),
       fuel: b.fuel,
       fuelMax: def.fuel?.burnS ?? 0,
@@ -368,7 +376,8 @@ export class BuildingSystem {
     if (this.world.bRemove(b, "inB", "dyson_component", 1) === 1) {
       this.world.state.stats.dysonFed++;
       Sfx.capture();
-      if (this.world.state.stats.dysonFed >= DYSON_NEEDED) {
+      // Fire victory exactly once, when crossing the threshold.
+      if (this.world.state.stats.dysonFed === DYSON_NEEDED) {
         this.onVictory(this.world.state.stats.dysonFed);
       }
     }

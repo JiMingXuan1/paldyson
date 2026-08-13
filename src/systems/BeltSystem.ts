@@ -1,17 +1,18 @@
 // Belts: DSP-style conveyor logistics. Items ride belt segments (0..1 along
 // the direction), flow into the next segment, and are pushed into adjacent
 // receiver buildings or pulled from adjacent source buildings / chests.
+// Item sprites are keyed by a stable per-item uid, never by array index.
 
 import Phaser from "phaser";
 import type { World } from "./World";
-import type { BeltInst, BuildingInst, ItemStack } from "../types";
-import { BUILDINGS } from "../data/buildings";
+import type { BeltInst, BuildingInst } from "../types";
 import { DIRS, TILE, BELT_TICK_MS, BELT_ITEM_SPEED } from "../config";
 
 export class BeltSystem {
   sprites = new Map<number, Phaser.GameObjects.Image>();
   private itemSprites = new Map<number, Map<number, Phaser.GameObjects.Image>>();
   private acc = 0;
+  private itemUid = 1;
 
   constructor(
     private scene: Phaser.Scene,
@@ -20,7 +21,14 @@ export class BeltSystem {
   ) {}
 
   create(): void {
-    for (const b of this.world.state.belts) this.spawn(b);
+    for (const b of this.world.state.belts) {
+      // Assign stable uids to items from a loaded save.
+      for (const it of b.items) {
+        if (!it.uid) it.uid = this.itemUid++;
+        if (it.uid >= this.itemUid) this.itemUid = it.uid + 1;
+      }
+      this.spawn(b);
+    }
   }
 
   private spawn(b: BeltInst): void {
@@ -29,31 +37,28 @@ export class BeltSystem {
       .setDepth(3);
     this.sprites.set(b.uid, img);
     this.itemSprites.set(b.uid, new Map());
-    b.items.forEach((it, i) => this.spawnItemSprite(b, i, it.id));
+    for (const it of b.items) this.spawnItemSprite(b, it);
   }
 
-  private spawnItemSprite(b: BeltInst, idx: number, itemId: string): void {
+  private spawnItemSprite(b: BeltInst, it: { uid: number; id: string }): void {
     const map = this.itemSprites.get(b.uid)!;
-    const img = this.scene.add.image(0, 0, `item_${itemId}`).setDepth(4.5);
-    map.set(idx, img);
+    const img = this.scene.add.image(0, 0, `item_${it.id}`).setDepth(4.5);
+    map.set(it.uid, img);
   }
 
-  private destroyItemSprite(b: BeltInst, idx: number): void {
+  private destroyItemSprite(b: BeltInst, itemUid: number): void {
     const map = this.itemSprites.get(b.uid);
     if (!map) return;
-    const img = map.get(idx);
-    if (img) img.destroy();
-    map.delete(idx);
+    map.get(itemUid)?.destroy();
+    map.delete(itemUid);
   }
 
   private rebuildItemSprites(b: BeltInst): void {
     const map = this.itemSprites.get(b.uid);
     if (!map) return;
-    for (const [idx, img] of [...map.entries()]) {
-      img.destroy();
-      map.delete(idx);
-    }
-    b.items.forEach((it, i) => this.spawnItemSprite(b, i, it.id));
+    for (const [, img] of [...map.entries()]) img.destroy();
+    map.clear();
+    for (const it of b.items) this.spawnItemSprite(b, it);
   }
 
   place(x: number, y: number, dir: number): BeltInst {
@@ -84,8 +89,9 @@ export class BeltSystem {
   /** Push an item into a belt's tail (pos 0) if free; returns success. */
   private pushItem(b: BeltInst, itemId: string): boolean {
     if (b.items.length >= 2 || !this.headSpace(b)) return false;
-    b.items.push({ id: itemId, pos: 0 });
-    this.spawnItemSprite(b, b.items.length - 1, itemId);
+    const it = { uid: this.itemUid++, id: itemId, pos: 0 };
+    b.items.push(it);
+    this.spawnItemSprite(b, it);
     return true;
   }
 
@@ -97,7 +103,6 @@ export class BeltSystem {
 
     // Move items forward along each belt.
     for (const b of this.world.state.belts) {
-      // Sort so the tail item moves first.
       b.items.sort((a, z) => a.pos - z.pos);
       const removed: number[] = [];
       for (let i = 0; i < b.items.length; i++) {
@@ -124,15 +129,16 @@ export class BeltSystem {
               continue;
             }
           }
-          // Blocked: wait at the end (keep pos at 0.99).
+          // Blocked: wait at the end.
           it.pos = 0.99;
         } else {
           it.pos = next;
         }
       }
       for (const i of removed.sort((a, z) => z - a)) {
+        const it = b.items[i];
         b.items.splice(i, 1);
-        this.destroyItemSprite(b, i);
+        this.destroyItemSprite(b, it.uid);
       }
     }
 
@@ -144,16 +150,10 @@ export class BeltSystem {
       const by = b.y - d.y;
       const source = this.world.buildingAt(bx, by);
       if (!source) continue;
-      const def = BUILDINGS[source.id];
-      if (!def || def.cat === "power" && source.id !== "chest") {
-        // Power buildings don't output; skip unless chest.
-        if (source.id !== "chest") continue;
-      }
-      if (source.outB.length === 0) continue;
+      if (source.id !== "chest" && source.outB.length === 0) continue;
       // Output side must face this belt (chest is omni).
-      const outPos = this.outputPos(source);
       const isChest = source.id === "chest";
-      const facing = isChest || (outPos.x === b.x && outPos.y === b.y);
+      const facing = isChest || this.outputPos(source).x === b.x && this.outputPos(source).y === b.y;
       if (!facing) continue;
       const stack = source.outB[0];
       if (this.pushItem(b, stack.id)) {
@@ -176,23 +176,12 @@ export class BeltSystem {
       const cy = b.y * TILE + TILE / 2;
       const lane = b.items.length === 1 ? 0 : b.items.length === 2 ? 8 : 0;
       b.items.forEach((it, i) => {
-        const img = map.get(i);
+        const img = map.get(it.uid);
         if (!img) return;
         const px = cx + d.x * (it.pos - 0.5) * TILE + (d.y !== 0 ? (i === 0 ? -lane : lane) : 0);
         const py = cy + d.y * (it.pos - 0.5) * TILE + (d.x !== 0 ? (i === 0 ? -lane : lane) : 0);
         img.setPosition(px, py);
       });
     }
-  }
-
-  /** Items of a belt as a list for save sanity (should be empty at save time). */
-  beltItems(b: BeltInst): ItemStack[] {
-    const agg: ItemStack[] = [];
-    for (const it of b.items) {
-      const found = agg.find((s) => s.id === it.id);
-      if (found) found.n++;
-      else agg.push({ id: it.id, n: 1 });
-    }
-    return agg;
   }
 }

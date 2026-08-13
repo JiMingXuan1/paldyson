@@ -3,7 +3,7 @@
 import Phaser from "phaser";
 import type { World } from "./World";
 import type { PalInst } from "../types";
-import { PLAYER_SPEED, TILE, MAP_W, MAP_H } from "../config";
+import { PLAYER_SPEED } from "../config";
 
 export class Player {
   sprite!: Phaser.Physics.Arcade.Sprite;
@@ -66,10 +66,5 @@ export class Player {
 
     this.world.state.player.x = this.sprite.x;
     this.world.state.player.y = this.sprite.y;
-  }
-
-  /** World bounds used for camera. */
-  static worldBounds(): Phaser.Geom.Rectangle {
-    return new Phaser.Geom.Rectangle(0, 0, MAP_W * TILE, MAP_H * TILE);
   }
 }

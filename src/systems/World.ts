@@ -2,7 +2,7 @@
 
 import { MAP_W, MAP_H, TILE } from "../config";
 import { RNG } from "../utils/rng";
-import type { NodeKind, NodeState, WorldState, BuildingInst, BeltInst, ItemStack } from "../types";
+import type { NodeKind, NodeState, WorldState, BuildingInst, BeltInst } from "../types";
 import { countStack, removeStack } from "../utils/inv";
 
 export const T_GRASS = 0;
@@ -49,9 +49,11 @@ export class World {
   terrain: Uint8Array;
   spawnTX = Math.floor(MAP_W / 2);
   spawnTY = Math.floor(MAP_H / 2);
+  private fresh: boolean;
 
   constructor(seed: number, fresh: boolean, loaded?: WorldState) {
     this.terrain = new Uint8Array(MAP_W * MAP_H);
+    this.fresh = fresh;
     if (fresh) {
       this.state = this.freshState(seed);
     } else if (loaded) {
@@ -125,8 +127,10 @@ export class World {
       }
     }
 
-    // Only place nodes on a fresh world.
-    if (Object.keys(this.state.nodes).length > 0) return;
+    // Only place nodes / assign the spawn point on a fresh world.
+    // (Terrain above is always regenerated from the seed so loaded saves keep
+    // the same map; node depletion state comes from the save.)
+    if (!this.fresh) return;
 
     const nodes = this.state.nodes;
     const nearSpawn = (x: number, y: number, min: number) => dist(x, y, this.spawnTX, this.spawnTY) < min;
@@ -271,23 +275,9 @@ export class World {
   bRemove(b: BuildingInst, which: "inB" | "outB", id: string, n: number): number {
     return removeStack(b[which], id, n);
   }
-
-  bufferCap(b: BuildingInst): number {
-    // Building def cap, default 10.
-    return b.id === "chest" ? 80 : 12;
-  }
-
   // ---- Save ----
 
   toSave(): WorldState {
     return this.state;
   }
-
-  serialize(): string {
-    return JSON.stringify(this.state);
-  }
-}
-
-export function makeItemStack(id: string, n: number): ItemStack {
-  return { id, n };
 }

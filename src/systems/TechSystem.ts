@@ -3,7 +3,6 @@
 import type Phaser from "phaser";
 import type { WorldState } from "../types";
 import { TECHS, TECH_ORDER } from "../data/tech";
-import { RECIPES } from "../data/buildings";
 import { Sfx } from "../utils/sound";
 
 export class TechSystem {
@@ -32,6 +31,9 @@ export class TechSystem {
     if (!t) return { ok: false, reason: "未知科技" };
     if (state.research.researched.includes(techId)) return { ok: false, reason: "已研究" };
     if (state.research.current === techId) return { ok: false, reason: "研究中" };
+    if (state.buildings.filter((b) => b.id === "research_lab").length === 0) {
+      return { ok: false, reason: "需要先建造研究所" };
+    }
     if (t.requires) {
       for (const r of t.requires) {
         if (!state.research.researched.includes(r)) return { ok: false, reason: "需要先研究前置科技" };
@@ -98,16 +100,10 @@ export class TechSystem {
         cost: t.cost,
         researched: this.world.research.researched.includes(id),
         current: this.world.research.current === id,
-        progress: this.world.research.current === id ? this.world.research.progress / t.cost : 0,
+        progress: this.world.research.current === id ? this.world.research.progress : 0,
         canStart: TechSystem.canResearch(this.world, id).ok,
         reason: TechSystem.canResearch(this.world, id).reason,
       };
     });
-  }
-
-  isRecipeUnlocked(recipeId: string): boolean {
-    const r = RECIPES[recipeId];
-    if (!r.tech) return true;
-    return TechSystem.unlocked(this.world, r.tech) && TechSystem.unlockedTech(this.world, r.tech);
   }
 }

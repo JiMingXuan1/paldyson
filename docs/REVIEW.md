@@ -231,3 +231,24 @@ in-progress research (progress stored as `0..cost`) will instantly complete unde
 5. **Save/load basics are sound** — uids continue from `nextUid`, belt items round-trip, follower
    pal and dyson-core panel state are restored, and the `node-depleted` event keeps gather state
    consistent with world state.
+
+---
+
+## Fixes applied (commit `1a3f9b4` + follow-ups)
+
+All Critical/Important findings were fixed and verified with the automated suites
+(`scripts/smoke.mjs`, `scripts/loop.mjs`, `scripts/victory.mjs`):
+
+| # | Fix |
+|---|---|
+| C1 | `GameScene` now passes **seconds** to `PalSystem.update`; wander timers converted to seconds. Regression test: wild pal displacement < 90px/0.5s. |
+| I1 | `BeltItem` carries a stable `uid`; belt item sprites keyed by uid (never array index). Regression test: sprite uid set == item uid set. |
+| I2 | Panel output stacks carry `data-take="outB"`; `onPanelTake` receives the correct buffer. |
+| I3 | Recipe unlock check now uses `TechSystem.unlockedTech(techId)`; 帕鲁球/戴森组件 are properly gated. |
+| I4 | Mining drill only consumes node charges when the ore is stored (`bAdd > 0`). |
+| I5 | `World.gen` gates node placement on the `fresh` flag; fully-depleted saves no longer resurrect nodes. |
+| I6 | Tech modal progress no longer double-divides by cost; save `version` bumped to 2 with v1 migration (in-progress research reset). |
+| + | Research now requires a lab building to start; `feedDyson` fires victory exactly once; wind factor uses config constants; coal generator only burns under demand; panel DOM rebuilds only on data change (select/scroll preserved); building placement rejected on the player's own tile; `interactE` picks the nearest building; missed-sphere pickups expire after 30s; `showVictory` uses `DAY_LENGTH`. |
+| − | Dead code removed: `events.ts` Emitter, `inv.addStack/stacksCopy`, `World.serialize/makeItemStack/bufferCap`, `Player.worldBounds`, `PalSystem.buildingName/boostFor`, `TechSystem.isRecipeUnlocked`, `BELT_CAPACITY/DIR_NAMES/ITEM_IDS/itemColor/PAL_IDS`, `BuildingDef.hotbar` flag, duplicate `HOTBAR_ORDER` (now a single source in `data/buildings.ts`). |
+
+Re-verification after fixes: `tsc --noEmit` clean · smoke 24/24 · loop 15/15 · victory ✓.

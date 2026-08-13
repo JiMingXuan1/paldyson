@@ -100,6 +100,28 @@ const r = await page.evaluate(async () => {
   }
   Math.random = realRandom;
 
+  // C1 regression: wild pals must walk, not teleport (dt unit fix).
+  w.state.time = 100; // back to daytime (hour ~16)
+  const w1 = s.palSys.wild[0];
+  if (w1) {
+    const x0 = w1.sprite.x, y0 = w1.sprite.y;
+    w1.tx = w1.sprite.x + 96;
+    w1.ty = w1.sprite.y;
+    w1.mode = "wander";
+    w1.timer = 5;
+    await new Promise((r2) => setTimeout(r2, 500));
+    const d = Math.hypot(w1.sprite.x - x0, w1.sprite.y - y0);
+    assert("wild pal walks (no teleport)", d > 3 && d < 90, `displacement=${d.toFixed(1)}px/0.5s`);
+  }
+
+  // I1 regression: belt item sprites are keyed by item uid.
+  const b1 = w.state.belts[0];
+  const beltMap = s.beltSys["itemSprites"].get(b1.uid);
+  const spriteUids = beltMap ? [...beltMap.keys()].sort((a, z) => a - z) : [];
+  const itemUids = b1.items.map((i) => i.uid).sort((a, z) => a - z);
+  assert("belt sprite uids match item uids", JSON.stringify(spriteUids) === JSON.stringify(itemUids),
+    `sprites=${JSON.stringify(spriteUids)} items=${JSON.stringify(itemUids)}`);
+
   // Deconstruct test: pal assignment cleanup.
   const voltPal = (() => { w.invAdd("pal_volt", 1); s.palSys.releaseFromInventory("volt"); return w.state.pals.find((p) => p.type === "volt"); })();
   if (voltPal) {

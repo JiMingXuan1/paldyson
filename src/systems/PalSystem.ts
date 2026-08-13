@@ -4,12 +4,11 @@ import Phaser from "phaser";
 import type { World } from "./World";
 import type { PalInst } from "../types";
 import { PALS } from "../data/pals";
-import { BUILDINGS } from "../data/buildings";
 import { Sfx } from "../utils/sound";
 import {
   TILE, MAP_W, MAP_H, WILD_PAL_SPAWN_N, CAPTURE_CHANCE,
+  SPHERE_SPEED, SPHERE_RANGE_TILES,
   PAL_HUNGER_DRAIN_S, PAL_MOOD_DRAIN_S, PAL_FEED_MOOD,
-  SPHERE_SPEED, SPHERE_RANGE_TILES, PAL_BOOST_MATCH, PAL_BOOST_OTHER,
 } from "../config";
 
 interface WildPal {
@@ -89,7 +88,7 @@ export class PalSystem {
         this.stepToward(w, dt, 110);
         if (w.fleeT <= 0) {
           w.mode = "wander";
-          w.timer = Phaser.Math.Between(500, 2000);
+          w.timer = Phaser.Math.FloatBetween(0.5, 2);
         }
         w.sprite.setTint(0xff8888);
       } else if (isNight) {
@@ -115,7 +114,7 @@ export class PalSystem {
             if (this.world.isWalkable(Math.floor(tx / TILE), Math.floor(ty / TILE))) {
               w.tx = tx;
               w.ty = ty;
-              w.timer = Phaser.Math.Between(1200, 4000);
+              w.timer = Phaser.Math.FloatBetween(1.2, 4);
               break;
             }
           }
@@ -175,19 +174,24 @@ export class PalSystem {
       }
     }
     if (!best) {
-      // Miss: leave a ground pickup the player can walk over.
+      // Miss: leave a ground pickup the player can walk over (30s lifetime).
       const pickup = this.scene.add.image(toX, toY, "item_pal_sphere").setDepth(2).setScale(0.9);
       const cx = toX, cy = toY;
+      let age = 0;
       const ev = this.scene.time.addEvent({
         delay: 100,
         loop: true,
         callback: () => {
+          age += 100;
           const p = this.world.state.player;
           if (Phaser.Math.Distance.Between(p.x, p.y, cx, cy) < 26) {
             this.world.invAdd("pal_sphere", 1);
             pickup.destroy();
             ev.remove();
             Sfx.click();
+          } else if (age > 30000) {
+            pickup.destroy();
+            ev.remove();
           }
         },
       });
@@ -322,18 +326,7 @@ export class PalSystem {
       if (working) p.mood = Math.max(0, p.mood - (dt / PAL_MOOD_DRAIN_S) * 100);
     }
   }
-
-  /** Current boost of a pal on a building (used by BuildingSystem via world). */
-  boostFor(pal: PalInst, buildingId: string): number {
-    if (pal.hunger <= 0 || pal.mood < 30) return 1;
-    return PALS[pal.type]?.worksWith.includes(buildingId) ? PAL_BOOST_MATCH : PAL_BOOST_OTHER;
-  }
-
   followerPal(): PalInst | null {
     return this.world.state.pals.find((p) => p.job.kind === "follow") ?? null;
-  }
-
-  buildingName(id: string): string {
-    return BUILDINGS[id]?.name ?? id;
   }
 }

@@ -2,9 +2,9 @@
 // Phaser canvas receives clicks everywhere except on actual widgets.
 
 import { ITEMS, itemName } from "../data/items";
-import { BUILDINGS, RECIPES } from "../data/buildings";
+import { BUILDINGS, RECIPES, HOTBAR_ORDER } from "../data/buildings";
 import { PALS } from "../data/pals";
-import { DYSON_NEEDED } from "../config";
+import { DYSON_NEEDED, DAY_LENGTH } from "../config";
 import { Sfx } from "../utils/sound";
 
 export interface UICallbacks {
@@ -182,8 +182,7 @@ export class UI {
   private renderHotbar(): void {
     this.hotbarEl.innerHTML = "";
     this.hotbarSlots = [];
-    const order = ["wind_turbine", "mining_drill", "furnace", "assembler", "research_lab", "belt", "chest", "coal_generator", "pal_terminal", "dyson_core"];
-    order.forEach((id, i) => {
+    HOTBAR_ORDER.forEach((id, i) => {
       const def = BUILDINGS[id];
       const locked = this.locked.has(id);
       const slot = el(`
@@ -408,12 +407,16 @@ export class UI {
   }): void {
     this._panelUid = data.uid;
     const p = document.getElementById("panel")!;
-    const stacks = (arr: { id: string; n: number }[]) => arr.length === 0
-      ? `<span class="empty">空</span>`
-      : arr.map((s) => `<span class="stack" data-take="${s.id}" title="点击取出 1 个">${itemName(s.id)}×${s.n}</span>`).join(" ");
 
     let body = `<div class="panel-title">${data.icon} ${data.name}</div>
       <div class="panel-desc">${data.desc}</div>`;
+
+    const stacksIn = data.inB.length === 0
+      ? `<span class="empty">空</span>`
+      : data.inB.map((s) => `<span class="stack" data-take="inB" data-item="${s.id}" title="点击取出 1 个">${itemName(s.id)}×${s.n}</span>`).join(" ");
+    const stacksOut = data.outB.length === 0
+      ? `<span class="empty">空</span>`
+      : data.outB.map((s) => `<span class="stack" data-take="outB" data-item="${s.id}" title="点击取出 1 个">${itemName(s.id)}×${s.n}</span>`).join(" ");
 
     // Recipe selector for producers.
     if (data.recipes.length > 0) {
@@ -437,8 +440,8 @@ export class UI {
     if (data.uid === this.dysonCoreUid) {
       body += `<div class="panel-sec">戴森组件：${data.dysonFed}/${DYSON_NEEDED} ${bar(data.dysonFed / DYSON_NEEDED, "#ffd24a")}<br><button class="btn small" id="p-dyson">投入 1 个戴森组件</button></div>`;
     }
-    body += `<div class="panel-sec">输入缓存：${stacks(data.inB)} <button class="btn small" id="p-deposit">存入背包材料</button></div>`;
-    body += `<div class="panel-sec">输出缓存：${stacks(data.outB)}</div>`;
+    body += `<div class="panel-sec">输入缓存：${stacksIn} <button class="btn small" id="p-deposit">存入背包材料</button></div>`;
+    body += `<div class="panel-sec">输出缓存：${stacksOut}</div>`;
     if (data.palOptions.length > 0) {
       const opts = [`<option value="">无</option>`].concat(data.palOptions.map((o) =>
         `<option value="${o.uid}" ${o.uid === data.palUid ? "selected" : ""}>${o.match ? "⭐" : ""}${o.name}（${PALS[o.type]?.name ?? o.type}）</option>`));
@@ -451,7 +454,9 @@ export class UI {
     p.classList.remove("hidden");
 
     p.querySelectorAll("[data-take]").forEach((s) => {
-      s.addEventListener("click", () => this.cb.onPanelTake(data.uid, "inB", (s as HTMLElement).dataset.take!));
+      const which = (s as HTMLElement).dataset.take as "inB" | "outB";
+      const item = (s as HTMLElement).dataset.item!;
+      s.addEventListener("click", () => this.cb.onPanelTake(data.uid, which, item));
     });
     p.querySelectorAll("[data-recipe]").forEach((s) => {
       s.addEventListener("click", () => this.cb.onPanelRecipe(data.uid, (s as HTMLElement).dataset.recipe!));
@@ -517,7 +522,7 @@ export class UI {
 
   showVictory(stats: { timeS: number; captures: number; built: number; itemsProduced: number }): void {
     const v = document.getElementById("victory")!;
-    const days = Math.floor(stats.timeS / 240) + 1;
+    const days = Math.floor(stats.timeS / DAY_LENGTH) + 1;
     v.innerHTML = `
       <div class="victory-box">
         <div class="victory-title">🪐 戴森环已点亮！</div>

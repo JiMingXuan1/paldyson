@@ -1,7 +1,7 @@
 // GameScene: wires all systems together — input, camera, world init, update loop.
 
 import Phaser from "phaser";
-import type { Dir, WorldState } from "../types";
+import type { Dir, WorldState, BuildingInst } from "../types";
 import { World, T_GRASS, T_WATER, tileFromWorld, tileKey, tileCenterX, tileCenterY } from "../systems/World";
 import { Player } from "../systems/Player";
 import { BuildingSystem } from "../systems/BuildingSystem";
@@ -11,7 +11,7 @@ import { TechSystem } from "../systems/TechSystem";
 import { UI } from "../ui/UI";
 import { Sfx } from "../utils/sound";
 import { saveGame, loadGame, hasSave, clearSave } from "../utils/save";
-import { BUILDINGS } from "../data/buildings";
+import { BUILDINGS, HOTBAR_ORDER } from "../data/buildings";
 import { NODE_DEFS, NODE_ITEMS } from "../systems/World";
 import {
   TILE, MAP_W, MAP_H, GATHER_INTERVAL_MS, GATHER_RANGE_TILES, INTERACT_RANGE_TILES,
@@ -53,6 +53,7 @@ export class GameScene extends Phaser.Scene {
   private accUi = 0;
   private accPanel = 0;
   private timeTextAcc = 0;
+  private panelSig = "";
 
   constructor() {
     super("game");
@@ -240,7 +241,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.ui.refreshBuilds(this.lockedSet());
-    this.pushUiState(true);
+    this.pushUiState();
     this.toast("🚀 欢迎来到幻兽戴森！目标：点亮戴森环。", "info");
 
     // Debug/test handle.
@@ -275,9 +276,8 @@ export class GameScene extends Phaser.Scene {
     for (let i = 1; i <= 10; i++) {
       this.keys[`NUM${i}`] = kb.addKey(i === 10 ? "ZERO" : ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE"][i - 1]);
     }
-    const hotbarOrder = ["wind_turbine", "mining_drill", "furnace", "assembler", "research_lab", "belt", "chest", "coal_generator", "pal_terminal", "dyson_core"];
     for (let i = 1; i <= 10; i++) {
-      const id = hotbarOrder[i - 1];
+      const id = HOTBAR_ORDER[i - 1];
       this.keys[`NUM${i}`].on("down", () => {
         if (!this.started) return;
         const locked = this.lockedSet().has(id);
@@ -468,12 +468,14 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     // Nearest building in range.
+    let best: { b: BuildingInst; d: number } | null = null;
     for (const b of this.world.state.buildings) {
       const d = Phaser.Math.Distance.Between(b.x, b.y, pt.x, pt.y);
-      if (d <= INTERACT_RANGE_TILES) {
-        this.openPanel(b.uid);
-        return;
-      }
+      if (d <= INTERACT_RANGE_TILES && (!best || d < best.d)) best = { b, d };
+    }
+    if (best) {
+      this.openPanel(best.b.uid);
+      return;
     }
   }
 
@@ -581,7 +583,7 @@ export class GameScene extends Phaser.Scene {
       this.techSys.tick(PROD_TICK_MS / 1000);
       this.palSys.drain(PROD_TICK_MS / 1000);
     }
-    this.palSys.update(dt * 1000, this.isNight());
+    this.palSys.update(dt, this.isNight());
     if (this.player.follower) {
       const pal = this.palSys.followerPal();
       if (!pal) this.player.setFollower(null);
@@ -601,13 +603,23 @@ export class GameScene extends Phaser.Scene {
     this.timeTextAcc += dt;
     if (this.accUi >= 0.2) {
       this.accUi = 0;
-      this.pushUiState(false);
+      this.pushUiState();
     }
     if (this.ui.panelOpen && this.accPanel >= 0.3) {
       this.accPanel = 0;
       const uid = this.ui.panelUid;
       const data = this.buildSys.panelData(uid ?? -1);
-      if (data) this.ui.showBuildingPanel(data);
+      if (!data) return;
+      // Rebuild only when the panel's data actually changed, so an open
+      // select/scroll position is not clobbered every refresh.
+      const sig = JSON.stringify([
+        data.inB, data.outB, data.recipeId, data.fuel.toFixed(1), data.nodeRemaining,
+        data.palUid, data.producing, data.dysonFed, Math.round(data.progress * 10),
+      ]);
+      if (sig !== this.panelSig) {
+        this.panelSig = sig;
+        this.ui.showBuildingPanel(data);
+      }
     }
     if (this.timeTextAcc >= 1) {
       this.timeTextAcc = 0;
@@ -628,7 +640,7 @@ export class GameScene extends Phaser.Scene {
     return hour < 6 || hour >= 19;
   }
 
-  private pushUiState(_force: boolean): void {
+  private pushUiState(): void {
     const inv = this.world.state.inventory;
     this.ui.setInventory(inv);
     this.ui.setPower(this.buildSys.power.gen, this.buildSys.power.use);

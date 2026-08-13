@@ -86,7 +86,6 @@ export const BUILDINGS: Record<string, BuildingDef> = {
     cost: { wood: 4, stone: 2 },
     cat: "power",
     powerGen: 20,
-    hotbar: true,
   },
   coal_generator: {
     id: "coal_generator",
@@ -99,7 +98,6 @@ export const BUILDINGS: Record<string, BuildingDef> = {
     powerGen: 60,
     fuel: { item: "coal", burnS: 6, power: 60 },
     bufferCap: 10,
-    hotbar: true,
   },
   mining_drill: {
     id: "mining_drill",
@@ -111,7 +109,6 @@ export const BUILDINGS: Record<string, BuildingDef> = {
     powerUse: 12,
     requiresNode: ["iron", "coal"],
     bufferCap: 10,
-    hotbar: true,
   },
   furnace: {
     id: "furnace",
@@ -124,7 +121,6 @@ export const BUILDINGS: Record<string, BuildingDef> = {
     powerUse: 15,
     recipes: ["smelt_iron"],
     bufferCap: 10,
-    hotbar: true,
   },
   assembler: {
     id: "assembler",
@@ -137,7 +133,6 @@ export const BUILDINGS: Record<string, BuildingDef> = {
     powerUse: 25,
     recipes: ["gear", "circuit", "pal_sphere", "dyson_component"],
     bufferCap: 12,
-    hotbar: true,
   },
   research_lab: {
     id: "research_lab",
@@ -149,7 +144,6 @@ export const BUILDINGS: Record<string, BuildingDef> = {
     powerUse: 15,
     fixedRecipe: "red_science",
     bufferCap: 10,
-    hotbar: true,
   },
   belt: {
     id: "belt",
@@ -159,7 +153,6 @@ export const BUILDINGS: Record<string, BuildingDef> = {
     cost: { wood: 1, stone: 1 },
     tech: "t_logistics",
     cat: "logistics",
-    hotbar: true,
   },
   chest: {
     id: "chest",
@@ -169,7 +162,6 @@ export const BUILDINGS: Record<string, BuildingDef> = {
     cost: { wood: 4 },
     cat: "logistics",
     bufferCap: 80,
-    hotbar: true,
   },
   pal_terminal: {
     id: "pal_terminal",
@@ -179,7 +171,6 @@ export const BUILDINGS: Record<string, BuildingDef> = {
     cost: { wood: 12, stone: 8 },
     tech: "t_pals",
     cat: "pal",
-    hotbar: true,
   },
   dyson_core: {
     id: "dyson_core",
@@ -191,7 +182,6 @@ export const BUILDINGS: Record<string, BuildingDef> = {
     cat: "special",
     consumesDyson: true,
     bufferCap: 10,
-    hotbar: true,
   },
 };
 

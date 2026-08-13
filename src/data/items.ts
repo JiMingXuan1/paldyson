@@ -27,12 +27,6 @@ export const ITEMS: Record<string, ItemDef> = {
   pal_aqua: { id: "pal_aqua", name: "泡泡鱼", color: "#5ab8ff", cat: "pal", desc: "温柔的水系帕鲁。科研与物流帮手。" },
 };
 
-export const ITEM_IDS = Object.keys(ITEMS);
-
 export function itemName(id: string): string {
   return ITEMS[id]?.name ?? id;
-}
-
-export function itemColor(id: string): string {
-  return ITEMS[id]?.color ?? "#888";
 }

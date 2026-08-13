@@ -35,7 +35,7 @@
 | 22 | `vite build` 生产构建通过 | ✅ | |
 | 23 | 无头浏览器启动 + 截图回归 | ✅ | 全屏像素扫描 + 逐建筑裁剪验证，见 docs/REVIEW.md |
 | 24 | 玩法闭环冒烟测试（采集→风电→采矿机→熔炉→红瓶→科技） | ✅ | scripts/smoke.mjs 24 项断言全过 |
-| 25 | 代码审查（独立子代理审阅 + 修复清单） | 🔄 | 见 docs/REVIEW.md |
+| 25 | 代码审查（独立子代理审阅 + 修复清单） | ✅ | 1 Critical + 6 Important + ~20 Minor 全部修复，见 docs/REVIEW.md |
 | 26 | GitHub 仓库备份与推送 | ✅ | https://github.com/JiMingXuan1/paldyson |
 
 ## 文档

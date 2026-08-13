@@ -26,7 +26,6 @@ export const WIND_MAX = 1.45;
 
 // Production tick (buildings update every N ms)
 export const PROD_TICK_MS = 250;
-export const BELT_CAPACITY = 4; // items per belt tile (2 lanes)
 
 // Save
 export const AUTOSAVE_MS = 20000;
@@ -52,5 +51,3 @@ export const DIRS = [
   { x: 0, y: 1 }, // 2 S
   { x: -1, y: 0 }, // 3 W
 ] as const;
-
-export const DIR_NAMES = ["北", "东", "南", "西"];

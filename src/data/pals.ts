@@ -123,5 +123,3 @@ export const PALS: Record<string, PalDef> = {
     ],
   },
 };
-
-export const PAL_IDS = Object.keys(PALS);
